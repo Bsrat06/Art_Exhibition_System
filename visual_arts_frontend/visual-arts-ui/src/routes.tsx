@@ -31,8 +31,8 @@ import VisitorProjects from "./pages/visitor/Projects"
 
 import About from "./pages/public/About"
 import Contact from "./pages/public/Contact"
-import Login from "./pages/public/Login"
-import Register from "./pages/public/Register"
+import Login from "./pages/auth/Login"
+import Register from "./pages/auth/Register"
 
 
 export default function AppRoutes() {
