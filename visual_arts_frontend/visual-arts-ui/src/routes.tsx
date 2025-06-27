@@ -21,6 +21,7 @@ import MemberProjects from "./pages/member/Projects"
 import MemberNotifications from "./pages/member/Notifications"
 import MemberSettings from "./pages/member/Settings"
 import MemberProfile from "./pages/member/Profile"
+import MyEvents from "./pages/member/MyEvents"
 
 
 import VisitorGallery from "./pages/visitor/Gallery"
@@ -95,6 +96,7 @@ export default function AppRoutes() {
           <Route path="settings" element={<MemberSettings />} />
           <Route path="profile" element={<MemberProfile />} />
           <Route index element={<MemberDashboard />} />
+          <Route path="my-events" element={<MyEvents />} />
         </Route>
       </Route>
 
