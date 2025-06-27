@@ -1,55 +1,85 @@
-import { useState } from "react"
-import type { Artwork } from "../../components/admin/ArtworkCard"
-import { ArtworkCard } from "../../components/admin/ArtworkCard"
+import { useEffect, useState } from "react"
+import API from "../../lib/api"
+import { Button } from "../../components/ui/button"
+import { Textarea } from "../../components/ui/textarea"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../../components/ui/dialog"
+// import { Input } from "../../components/ui/input"
 
-const initialArtworks: Artwork[] = [
-  {
-    id: 1,
-    title: "Sunset Reflection",
-    artist: "Liya Tesfaye",
-    description: "Inspired by the colors of the setting sun.",
-    image: "https://via.placeholder.com/300x200?text=Sunset",
-    status: "pending"
-  },
-  {
-    id: 2,
-    title: "The Forest Whisper",
-    artist: "Yonas Kebede",
-    description: "An abstract take on deep forest emotions.",
-    image: "https://via.placeholder.com/300x200?text=Forest",
-    status: "pending"
-  }
-]
+type Artwork = {
+  id: number
+  title: string
+  image: string
+  description: string
+  category: string
+  artist_name: string
+  submission_date: string
+}
 
 export default function ArtworkApprovals() {
-  const [artworks, setArtworks] = useState(initialArtworks)
+  const [artworks, setArtworks] = useState<Artwork[]>([])
+  const [selected, setSelected] = useState<Artwork | null>(null)
+  const [feedback, setFeedback] = useState("")
+  const [showDialog, setShowDialog] = useState(false)
 
-  const approveArtwork = (id: number) => {
-    setArtworks(prev => prev.map(a => a.id === id ? { ...a, status: "approved" } : a))
+  useEffect(() => {
+    fetchArtworks()
+  }, [])
+
+  const fetchArtworks = async () => {
+    const res = await API.get("/artwork/?approval_status=pending")
+    setArtworks(res.data.results || [])
   }
 
-  const rejectArtwork = (id: number) => {
-    setArtworks(prev => prev.map(a => a.id === id ? { ...a, status: "rejected" } : a))
+
+  const handleApprove = async (id: number) => {
+    await API.patch(`/artwork/${id}/approve/`)
+    fetchArtworks()
+    setShowDialog(false)
+  }
+
+  const handleReject = async () => {
+    if (!selected || !feedback.trim()) return
+    await API.patch(`/artwork/${selected.id}/reject/`, { feedback })
+    fetchArtworks()
+    setShowDialog(false)
+    setFeedback("")
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Artwork Approvals</h1>
+    <div className="space-y-8">
+      <h1 className="text-xl font-semibold">Pending Artwork Approvals</h1>
+
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {artworks
-          .filter(a => a.status === "pending")
-          .map(artwork => (
-            <ArtworkCard
-              key={artwork.id}
-              artwork={artwork}
-              onApprove={approveArtwork}
-              onReject={rejectArtwork}
-            />
-          ))}
+        {artworks.map((art) => (
+          <div key={art.id} className="bg-white p-4 rounded shadow space-y-2">
+            <img src={art.image} alt={art.title} className="w-full h-40 object-cover rounded" />
+            <h2 className="font-semibold">{art.title}</h2>
+            <p className="text-sm text-muted-foreground">By: {art.artist_name}</p>
+            <p className="text-sm text-muted-foreground">Category: {art.category}</p>
+            <div className="flex gap-2 mt-2">
+              <Button size="sm" onClick={() => handleApprove(art.id)}>Approve</Button>
+              <Button size="sm" variant="destructive" onClick={() => {
+                setSelected(art)
+                setShowDialog(true)
+              }}>Reject</Button>
+            </div>
+          </div>
+        ))}
       </div>
-      {artworks.filter(a => a.status === "pending").length === 0 && (
-        <p className="text-muted-foreground text-center py-6">No pending artwork submissions.</p>
-      )}
+
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Artwork</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm">Please provide feedback for rejecting "{selected?.title}"</p>
+          <Textarea rows={4} value={feedback} onChange={(e) => setFeedback(e.target.value)} />
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setShowDialog(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleReject}>Submit Rejection</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
