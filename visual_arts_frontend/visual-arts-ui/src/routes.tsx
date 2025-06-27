@@ -35,8 +35,8 @@ import Login from "./pages/auth/Login"
 import Register from "./pages/auth/Register"
 
 
-import { RequireAuth } from "./guards/RequireAuth" // 👈 import the guard
-import { Navigate } from "react-router-dom";
+import { RequireAuth } from "./guards/RequireAuth"
+import { RequireGuest } from "./guards/RequireAuth"
 
 
 
@@ -48,8 +48,22 @@ export default function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
-      <Route path="/login" element={localStorage.getItem("token") ? <Navigate to="/" /> : <Login />} />
-      <Route path="/register" element={localStorage.getItem("token") ? <Navigate to="/" /> : <Register />} />
+      <Route
+        path="/login"
+        element={
+          <RequireGuest>
+            <Login />
+          </RequireGuest>
+        }
+      />
+      <Route
+        path="/register"
+        element={
+          <RequireGuest>
+            <Register />
+          </RequireGuest>
+        }
+      />
       <Route path="/gallery" element={<VisitorGallery />} />
       <Route path="/artwork/:id" element={<ArtworkDetail />} />
       <Route path="/events" element={<VisitorEvents />} />

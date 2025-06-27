@@ -8,6 +8,7 @@ export function useAuth() {
   useEffect(() => {
     const token = localStorage.getItem("token")
     if (!token) {
+      setUser(null)
       setLoading(false)
       return
     }
@@ -16,6 +17,7 @@ export function useAuth() {
       .then(res => setUser(res.data))
       .catch(() => {
         localStorage.removeItem("token")
+        localStorage.removeItem("role")
         setUser(null)
       })
       .finally(() => setLoading(false))
