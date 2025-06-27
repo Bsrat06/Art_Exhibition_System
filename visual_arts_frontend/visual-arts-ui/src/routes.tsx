@@ -85,7 +85,7 @@ export default function AppRoutes() {
       </Route>
 
       {/* Member Routes - these will use MemberLayout */}
-      <Route element={<RequireAuth allowedRoles={["member"]} />}>
+      <Route element={<RequireAuth allowedRoles={["admin","member"]} />}>
         <Route path="/member" element={<MemberLayout />}>
           <Route path="dashboard" element={<MemberDashboard />} />
           <Route path="portfolio" element={<Portfolio />} />
