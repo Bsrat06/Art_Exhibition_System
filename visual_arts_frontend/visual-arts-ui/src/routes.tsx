@@ -35,6 +35,11 @@ import Login from "./pages/auth/Login"
 import Register from "./pages/auth/Register"
 
 
+import { RequireAuth } from "./guards/RequireAuth" // 👈 import the guard
+import { Navigate } from "react-router-dom";
+
+
+
 export default function AppRoutes() {
   return (
     <Routes>
@@ -43,8 +48,8 @@ export default function AppRoutes() {
       <Route path="/" element={<Home />} />
       <Route path="/about" element={<About />} />
       <Route path="/contact" element={<Contact />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={localStorage.getItem("token") ? <Navigate to="/" /> : <Login />} />
+      <Route path="/register" element={localStorage.getItem("token") ? <Navigate to="/" /> : <Register />} />
       <Route path="/gallery" element={<VisitorGallery />} />
       <Route path="/artwork/:id" element={<ArtworkDetail />} />
       <Route path="/events" element={<VisitorEvents />} />
@@ -52,29 +57,31 @@ export default function AppRoutes() {
     </Route>
 
       {/* Admin Routes - these will use AdminLayout */}
-      <Route path="/admin" element={<AdminLayout />}> {/* <-- Add a base path for the AdminLayout */}
-        <Route path="dashboard" element={<AdminDashboard />} /> {/* <-- Nested path, becomes /admin/dashboard */}
-        <Route path="members" element={<ManageMembers />} />
-        <Route path="artworks" element={<ArtworkApprovals />} />
-        <Route path="events" element={<ManageEvents />} />
-        <Route path="projects" element={<ManageProjects />} />
-        <Route path="notifications" element={<Notifications />} />
-        <Route path="reports" element={<Reports />} />
-        {/* Optional: Default admin route */}
-        <Route index element={<AdminDashboard />} /> {/* Renders AdminDashboard if someone just goes to /admin */}
+      <Route element={<RequireAuth allowedRoles={["admin"]} />}>
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="members" element={<ManageMembers />} />
+          <Route path="artworks" element={<ArtworkApprovals />} />
+          <Route path="events" element={<ManageEvents />} />
+          <Route path="projects" element={<ManageProjects />} />
+          <Route path="notifications" element={<Notifications />} />
+          <Route path="reports" element={<Reports />} />
+          <Route index element={<AdminDashboard />} />
+        </Route>
       </Route>
 
       {/* Member Routes - these will use MemberLayout */}
-      <Route path="/member" element={<MemberLayout />}> {/* <-- Add a base path for the MemberLayout */}
-        <Route path="dashboard" element={<MemberDashboard />} /> {/* <-- Nested path, becomes /member/dashboard */}
-        <Route path="portfolio" element={<Portfolio />} /> {/* <-- THIS IS WHAT YOU WANT */}
-        <Route path="events" element={<MemberEvents />} />
-        <Route path="projects" element={<MemberProjects />} />
-        <Route path="notifications" element={<MemberNotifications />} />
-        <Route path="settings" element={<MemberSettings />} />
-        <Route path="profile" element={<MemberProfile />} />
-        {/* Optional: Default member route */}
-        <Route index element={<MemberDashboard />} /> {/* Renders MemberDashboard if someone just goes to /member */}
+      <Route element={<RequireAuth allowedRoles={["member"]} />}>
+        <Route path="/member" element={<MemberLayout />}>
+          <Route path="dashboard" element={<MemberDashboard />} />
+          <Route path="portfolio" element={<Portfolio />} />
+          <Route path="events" element={<MemberEvents />} />
+          <Route path="projects" element={<MemberProjects />} />
+          <Route path="notifications" element={<MemberNotifications />} />
+          <Route path="settings" element={<MemberSettings />} />
+          <Route path="profile" element={<MemberProfile />} />
+          <Route index element={<MemberDashboard />} />
+        </Route>
       </Route>
 
 
