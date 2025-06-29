@@ -1,37 +1,9 @@
-import { useState } from "react"
-import { NotificationForm } from "../../components/admin/NotificationForm"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
+import NotificationList from "../../components/common/NotificationList"
 
-export default function Notifications() {
-  const [notifications, setNotifications] = useState([
-    { id: 1, message: "Project updates due next week", date: new Date().toISOString() }
-  ])
-
-  const sendNotification = (message: string) => {
-    setNotifications([
-      { id: Date.now(), message, date: new Date().toISOString() },
-      ...notifications
-    ])
-  }
-
+export default function AdminNotifications() {
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-xl font-semibold">Notifications</h1>
-        <NotificationForm onSubmit={sendNotification} />
-      </div>
-
-      <div className="space-y-4">
-        {notifications.map((n) => (
-          <Card key={n.id}>
-            <CardHeader>
-              <CardTitle>Notification</CardTitle>
-              <CardDescription>{new Date(n.date).toLocaleString()}</CardDescription>
-            </CardHeader>
-            <CardContent>{n.message}</CardContent>
-          </Card>
-        ))}
-      </div>
+    <div className="max-w-4xl mx-auto p-4">
+      <NotificationList />
     </div>
   )
 }

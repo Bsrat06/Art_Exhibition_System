@@ -12,6 +12,7 @@ import ManageEvents from "./pages/admin/Events"
 import ManageProjects from "./pages/admin/Projects"
 import Notifications from "./pages/admin/Notifications"
 import Reports from "./pages/admin/Reports"
+import SendNotification from "./pages/admin/SendNotification"
 
 
 import MemberDashboard from "./pages/member/Dashboard"
@@ -82,6 +83,7 @@ export default function AppRoutes() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="reports" element={<Reports />} />
           <Route index element={<AdminDashboard />} />
+          <Route path="notifications/send" element={<SendNotification />} />
         </Route>
       </Route>
 
