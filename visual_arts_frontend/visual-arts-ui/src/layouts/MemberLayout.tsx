@@ -2,6 +2,8 @@ import { Outlet } from "react-router-dom"
 import MemberSidebar from "../components/member/MemberSidebar"
 import NotificationBell from "../components/common/NotificationBell"
 import LogoutButton from "../components/common/LogoutButton"
+import ThemeToggle from "../components/common/ThemeToggle"
+
 
 export default function MemberLayout() {
   return (
@@ -11,6 +13,7 @@ export default function MemberLayout() {
         <div className="flex justify-between items-center mb-4">
           <h1 className="text-xl font-semibold">Member Dashboard</h1>
           <div className="flex gap-4 items-center">
+            <ThemeToggle/>
             <NotificationBell />
             <LogoutButton />
           </div>
