@@ -13,7 +13,27 @@ import {
   AlertCircle
 } from "lucide-react"
 
-const iconMap = {
+// Define explicit types for the icon map keys
+export type ActivityType = 
+  | 'approval' 
+  | 'rejection' 
+  | 'pending' 
+  | 'registration' 
+  | 'artwork' 
+  | 'event' 
+  | 'project' 
+  | 'announcement' 
+  | 'warning' 
+  | 'success'
+
+// Define explicit types for status values
+export type ActivityStatus = 
+  | 'completed' 
+  | 'pending' 
+  | 'failed' 
+  | 'info'
+
+const iconMap: Record<ActivityType, React.ComponentType<{ className?: string }>> = {
   approval: Brush,
   rejection: XCircle,
   pending: Clock,
@@ -26,7 +46,7 @@ const iconMap = {
   success: CheckCircle2
 }
 
-const statusColors = {
+const statusColors: Record<ActivityStatus, string> = {
   completed: 'bg-green-100 text-green-800',
   pending: 'bg-yellow-100 text-yellow-800',
   failed: 'bg-red-100 text-red-800',
@@ -34,14 +54,14 @@ const statusColors = {
 }
 
 interface RecentActivityItemProps {
-  type: keyof typeof iconMap
+  type: ActivityType
   title: string
   user?: {
     name: string
     avatar?: string
   }
   timestamp: string | Date
-  status?: keyof typeof statusColors
+  status?: ActivityStatus
   fullWidth?: boolean
 }
 

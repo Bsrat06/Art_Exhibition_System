@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 type StatCardProps = {
   title: string
   value: number | string
+  change?: number;
   icon?: React.ReactNode
 }
 

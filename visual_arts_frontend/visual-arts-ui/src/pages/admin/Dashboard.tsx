@@ -1,5 +1,5 @@
 import { StatCard } from "../../components/admin/StatCard"
-import { Users, Brush, CalendarDays, FolderKanban, Clock, AlertCircle, CheckCircle2, TrendingUp, Mail, Activity } from "lucide-react"
+import { Users, Brush, CalendarDays, FolderKanban, AlertCircle, CheckCircle2, TrendingUp, Mail, Activity, UserPlus } from "lucide-react"
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../components/ui/tabs"
 import { Button } from "../../components/ui/button"
