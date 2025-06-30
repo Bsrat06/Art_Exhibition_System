@@ -3,13 +3,15 @@ import { Input } from "../../components/ui/input";
 import { Button } from "../../components/ui/button";
 import { Label } from "../../components/ui/label";
 import { Textarea } from "../../components/ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "../../components/ui/card";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
-import { Upload, Eye, EyeOff, Trash2, RotateCw } from "lucide-react";
+import { Upload, Eye, EyeOff, Trash2, RotateCw, User, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import Cropper from "react-easy-crop";
+import { Slider } from "../../components/ui/slider";
 import API from "../../lib/api";
-import "react-datepicker/dist/react-datepicker.css";
+import { Badge } from "../../components/ui/badge";
+import { Progress } from "../../components/ui/progress";
 
 type ProfileForm = {
   first_name: string;
@@ -57,7 +59,14 @@ export default function MemberProfile() {
     API.get("/auth/user/")
       .then((res) => {
         const { first_name, last_name, email, bio, profile_picture } = res.data;
-        const profileData = { first_name, last_name, email, bio: bio || "", profile_picture: null, password: "" };
+        const profileData = { 
+          first_name, 
+          last_name, 
+          email, 
+          bio: bio || "", 
+          profile_picture: null, 
+          password: "" 
+        };
         setForm(profileData);
         setInitialForm(profileData);
         setPreviewUrl(profile_picture || null);
@@ -66,7 +75,6 @@ export default function MemberProfile() {
       .finally(() => setIsLoading(false));
   }, []);
 
-  // Handle input change
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value, files } = e.target as HTMLInputElement;
     if (name === "profile_picture" && files && files[0]) {
@@ -75,7 +83,6 @@ export default function MemberProfile() {
       setShowCropper(true);
     } else {
       setForm({ ...form, [name]: value });
-      // Validate on change
       setErrors((prev) => ({
         ...prev,
         [name]:
@@ -100,7 +107,6 @@ export default function MemberProfile() {
     }
   };
 
-  // Get cropped image
   const getCroppedImg = useCallback(
     async (imageSrc: string, pixelCrop: CroppedAreaPixels) => {
       const image = new Image();
@@ -132,12 +138,10 @@ export default function MemberProfile() {
     []
   );
 
-  // Handle crop complete
   const onCropComplete = useCallback((_: any, croppedAreaPixels: CroppedAreaPixels) => {
     setCroppedAreaPixels(croppedAreaPixels);
   }, []);
 
-  // Save cropped image
   const saveCroppedImage = async () => {
     if (previewUrl && croppedAreaPixels) {
       try {
@@ -151,13 +155,12 @@ export default function MemberProfile() {
     }
   };
 
-  // Delete profile picture
   const deleteProfilePicture = async () => {
     setIsLoading(true);
     try {
       await API.delete("/auth/profile/remove-picture/");
       setForm({ ...form, profile_picture: null });
-      setPreviewUrl(null); // Fixed: Set previewUrl to null
+      setPreviewUrl(null);
       setShowCropper(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
       toast.success("Profile picture removed successfully");
@@ -168,7 +171,6 @@ export default function MemberProfile() {
     }
   };
 
-  // Reset form
   const resetForm = () => {
     if (initialForm) {
       setForm(initialForm);
@@ -176,13 +178,11 @@ export default function MemberProfile() {
       setErrors({});
       setShowCropper(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
-      toast.info("Form reset to original values");
+      toast.info("Changes discarded");
     }
   };
 
-  // Submit update
   const handleSubmit = async () => {
-    // Validate form
     const newErrors: Partial<ProfileForm> = {
       first_name: form.first_name.length > 50 ? "First name must be 50 characters or less" : undefined,
       last_name: form.last_name.length > 50 ? "Last name must be 50 characters or less" : undefined,
@@ -219,212 +219,310 @@ export default function MemberProfile() {
     }
   };
 
+  const hasChanges = () => {
+    if (!initialForm) return false;
+    return (
+      form.first_name !== initialForm.first_name ||
+      form.last_name !== initialForm.last_name ||
+      form.email !== initialForm.email ||
+      form.password !== "" ||
+      form.bio !== initialForm.bio ||
+      form.profile_picture !== null
+    );
+  };
+
   return (
     <TooltipProvider>
-      <div className="max-w-xl mx-auto space-y-6 animate-[fadeIn_0.5s_ease-in]">
-        <Card className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 transition-transform hover:scale-[1.02]">
-          <CardHeader>
-            <CardTitle className="text-xl font-semibold">Edit Profile</CardTitle>
-            <p className="text-sm text-muted-foreground">Update your personal information and profile picture</p>
+      <div className="max-w-2xl mx-auto space-y-6 animate-[fadeIn_0.5s_ease-in]">
+        <Card className="border border-gray-200 dark:border-gray-700 shadow-sm">
+          <CardHeader className="border-b border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xl font-semibold text-gray-900 dark:text-white">
+                Profile Settings
+              </CardTitle>
+              {hasChanges() && (
+                <Badge variant="outline" className="text-xs">
+                  Unsaved Changes
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Manage your personal information and account settings
+            </p>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label className="text-sm">First Name</Label>
-              <Input
-                name="first_name"
-                value={form.first_name}
-                onChange={handleChange}
-                className="text-sm"
-                aria-invalid={!!errors.first_name}
-                aria-describedby="first-name-error"
-              />
-              {errors.first_name && (
-                <p id="first-name-error" className="text-xs text-red-500 mt-1">
-                  {errors.first_name}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label className="text-sm">Last Name</Label>
-              <Input
-                name="last_name"
-                value={form.last_name}
-                onChange={handleChange}
-                className="text-sm"
-                aria-invalid={!!errors.last_name}
-                aria-describedby="last-name-error"
-              />
-              {errors.last_name && (
-                <p id="last-name-error" className="text-xs text-red-500 mt-1">
-                  {errors.last_name}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label className="text-sm">Email</Label>
-              <Input
-                name="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange}
-                className="text-sm"
-                aria-invalid={!!errors.email}
-                aria-describedby="email-error"
-              />
-              {errors.email && (
-                <p id="email-error" className="text-xs text-red-500 mt-1">
-                  {errors.email}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label className="text-sm">New Password</Label>
-              <div className="relative">
-                <Input
-                  name="password"
-                  type={showPassword ? "text" : "password"}
-                  value={form.password}
-                  onChange={handleChange}
-                  className="text-sm pr-10"
-                  aria-invalid={!!errors.password}
-                  aria-describedby="password-error"
-                />
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-2 top-1/2 -translate-y-1/2"
-                  onClick={() => setShowPassword(!showPassword)}
-                  aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                </Button>
+          <CardContent className="pt-6 space-y-6">
+            {/* Profile Picture Section */}
+            <div className="flex flex-col sm:flex-row gap-6">
+              <div className="flex flex-col items-center sm:items-start gap-4">
+                <div className="relative group">
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt="Profile preview"
+                      className="w-32 h-32 rounded-full border-4 border-white dark:border-gray-800 shadow-md object-cover transition-transform group-hover:scale-105"
+                    />
+                  ) : (
+                    <div className="w-32 h-32 rounded-full bg-gray-100 dark:bg-gray-800 border-4 border-white dark:border-gray-800 shadow-md flex items-center justify-center">
+                      <User className="w-12 h-12 text-gray-400 dark:text-gray-500" />
+                    </div>
+                  )}
+                  <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="rounded-full w-10 h-10 p-0 bg-white dark:bg-gray-800 shadow-sm"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Upload className="w-4 h-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Upload new photo</TooltipContent>
+                    </Tooltip>
+                    {previewUrl && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="rounded-full w-10 h-10 p-0 bg-white dark:bg-gray-800 shadow-sm"
+                            onClick={deleteProfilePicture}
+                            disabled={isLoading}
+                          >
+                            <Trash2 className="w-4 h-4 text-red-500 dark:text-red-400" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Remove photo</TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                  <input
+                    name="profile_picture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleChange}
+                    className="hidden"
+                    ref={fileInputRef}
+                  />
+                </div>
+                {showCropper && previewUrl && (
+                  <div className="mt-4 w-full max-w-xs">
+                    <div className="relative w-full h-64 rounded-lg overflow-hidden">
+                      <Cropper
+                        image={previewUrl}
+                        crop={crop}
+                        zoom={zoom}
+                        aspect={1}
+                        cropShape="round"
+                        showGrid={false}
+                        onCropChange={setCrop}
+                        onZoomChange={setZoom}
+                        onCropComplete={onCropComplete}
+                      />
+                    </div>
+                    <div className="mt-3">
+                      <Label className="text-xs text-gray-600 dark:text-gray-400 mb-2 block">
+                        Zoom: {zoom.toFixed(1)}
+                      </Label>
+                      <Slider
+                        value={[zoom]}
+                        min={1}
+                        max={3}
+                        step={0.1}
+                        onValueChange={(value) => setZoom(value[0])}
+                      />
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <Button
+                        size="sm"
+                        onClick={saveCroppedImage}
+                        disabled={isLoading}
+                        className="flex-1"
+                      >
+                        <Check className="w-4 h-4 mr-2" />
+                        Save Crop
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          setShowCropper(false);
+                          setForm({ ...form, profile_picture: null });
+                          setPreviewUrl(null);
+                          if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        disabled={isLoading}
+                        className="flex-1"
+                      >
+                        <X className="w-4 h-4 mr-2" />
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
-              {errors.password && (
-                <p id="password-error" className="text-xs text-red-500 mt-1">
-                  {errors.password}
-                </p>
-              )}
+
+              {/* Personal Info Section */}
+              <div className="flex-1 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      First Name
+                    </Label>
+                    <Input
+                      name="first_name"
+                      value={form.first_name}
+                      onChange={handleChange}
+                      className="mt-1"
+                      aria-invalid={!!errors.first_name}
+                    />
+                    {errors.first_name && (
+                      <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                        {errors.first_name}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Last Name
+                    </Label>
+                    <Input
+                      name="last_name"
+                      value={form.last_name}
+                      onChange={handleChange}
+                      className="mt-1"
+                      aria-invalid={!!errors.last_name}
+                    />
+                    {errors.last_name && (
+                      <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                        {errors.last_name}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    Email
+                  </Label>
+                  <Input
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    className="mt-1"
+                    aria-invalid={!!errors.email}
+                  />
+                  {errors.email && (
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                      {errors.email}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    New Password
+                  </Label>
+                  <div className="relative mt-1">
+                    <Input
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={form.password}
+                      onChange={handleChange}
+                      className="pr-10"
+                      aria-invalid={!!errors.password}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="w-4 h-4" />
+                      ) : (
+                        <Eye className="w-4 h-4" />
+                      )}
+                    </Button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-xs text-red-500 dark:text-red-400 mt-1">
+                      {errors.password}
+                    </p>
+                  )}
+                  {form.password && !errors.password && (
+                    <Progress
+                      value={
+                        form.password.length >= 12
+                          ? 100
+                          : (form.password.length / 12) * 100
+                      }
+                      className="mt-2 h-1.5"
+                      indicatorClassName={
+                        form.password.length >= 8
+                          ? "bg-green-500 dark:bg-green-400"
+                          : "bg-yellow-500 dark:bg-yellow-400"
+                      }
+                    />
+                  )}
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    {form.password.length > 0
+                      ? "Password strength"
+                      : "Leave blank to keep current password"}
+                  </p>
+                </div>
+              </div>
             </div>
+
+            {/* Bio Section */}
             <div>
-              <Label className="text-sm">Bio</Label>
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                About You
+              </Label>
               <Textarea
                 name="bio"
                 value={form.bio}
                 onChange={handleChange}
-                className="text-sm"
+                className="mt-1"
                 rows={4}
                 maxLength={500}
                 aria-invalid={!!errors.bio}
-                aria-describedby="bio-error"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                {form.bio.length}/500 characters
-              </p>
-              {errors.bio && (
-                <p id="bio-error" className="text-xs text-red-500 mt-1">
-                  {errors.bio}
+              <div className="flex justify-between mt-1">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {form.bio.length}/500 characters
                 </p>
-              )}
-            </div>
-            <div>
-              <Label className="text-sm">Profile Picture</Label>
-              <div className="flex items-center gap-2">
-                <Input
-                  name="profile_picture"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleChange}
-                  className="text-sm"
-                  ref={fileInputRef}
-                  aria-label="Upload profile picture"
-                />
-                {previewUrl && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={deleteProfilePicture}
-                        disabled={isLoading}
-                        aria-label="Delete profile picture"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Remove profile picture</TooltipContent>
-                  </Tooltip>
+                {errors.bio && (
+                  <p className="text-xs text-red-500 dark:text-red-400">
+                    {errors.bio}
+                  </p>
                 )}
               </div>
-              {previewUrl && !showCropper && (
-                <img
-                  src={previewUrl}
-                  alt="Profile preview"
-                  className="w-28 h-28 rounded-full mt-3 border-2 border-teal-500 dark:border-teal-600 object-cover transition-transform hover:scale-[1.02]"
-                />
-              )}
-              {showCropper && previewUrl && (
-                <div className="mt-3">
-                  <div className="relative w-64 h-64">
-                    <Cropper
-                      image={previewUrl}
-                      crop={crop}
-                      zoom={zoom}
-                      aspect={1}
-                      cropShape="round"
-                      showGrid={false}
-                      onCropChange={setCrop}
-                      onZoomChange={setZoom}
-                      onCropComplete={onCropComplete}
-                    />
-                  </div>
-                  <div className="flex gap-2 mt-2">
-                    <Button
-                      size="sm"
-                      onClick={saveCroppedImage}
-                      disabled={isLoading}
-                      className="text-sm"
-                    >
-                      Save Crop
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setShowCropper(false);
-                        setForm({ ...form, profile_picture: null });
-                        setPreviewUrl(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                      }}
-                      disabled={isLoading}
-                      className="text-sm"
-                    >
-                      Cancel Crop
-                    </Button>
-                  </div>
-                </div>
-              )}
             </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="text-sm"
-                aria-label="Save profile changes"
-              >
-                {isLoading ? <RotateCw className="w-3.5 h-3.5 mr-1.5 animate-spin" /> : <Upload className="w-3.5 h-3.5 mr-1.5" />}
-                {isLoading ? "Saving..." : "Save Changes"}
-              </Button>
+          </CardContent>
+          <CardFooter className="border-t border-gray-200 dark:border-gray-700 py-4 px-6 bg-gray-50 dark:bg-gray-800/50 rounded-b-lg">
+            <div className="flex justify-end gap-3 w-full">
               <Button
                 variant="outline"
                 onClick={resetForm}
-                disabled={isLoading}
-                className="text-sm"
-                aria-label="Reset form"
+                disabled={isLoading || !hasChanges()}
               >
-                Cancel
+                Discard
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={isLoading || !hasChanges()}
+                className="min-w-[120px]"
+              >
+                {isLoading ? (
+                  <RotateCw className="w-4 h-4 mr-2 animate-spin" />
+                ) : null}
+                {isLoading ? "Saving..." : "Save Changes"}
               </Button>
             </div>
-          </CardContent>
+          </CardFooter>
         </Card>
       </div>
     </TooltipProvider>

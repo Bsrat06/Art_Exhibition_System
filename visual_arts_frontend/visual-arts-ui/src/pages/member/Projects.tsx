@@ -1,48 +1,38 @@
-import { useState } from "react"
-import { ProjectCard } from "../../components/member/ProjectCard"
-
-const availableProjects = [
-  {
-    id: 1,
-    title: "Mural Collab",
-    description: "Large mural painting project on campus walls.",
-    progress: 45
-  },
-  {
-    id: 2,
-    title: "Exhibition Prep",
-    description: "Preparing promotional artwork and posters.",
-    progress: 70
-  },
-  {
-    id: 3,
-    title: "Street Art Tour",
-    description: "Organizing an outdoor graffiti showcase.",
-    progress: 20
-  }
-]
+import { useMemberProjects } from "../../hooks/use-member-projects"
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
+import { Skeleton } from "../../components/ui/skeleton"
 
 export default function MemberProjects() {
-  const [joinedIds, setJoinedIds] = useState<number[]>([1]) // Assume member has joined Project 1
-
-  const toggleParticipation = (id: number) => {
-    const isJoined = joinedIds.includes(id)
-    setJoinedIds(isJoined ? joinedIds.filter(pid => pid !== id) : [...joinedIds, id])
-  }
+  const { projects, loading } = useMemberProjects()
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Available Projects</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {availableProjects.map(project => (
-          <ProjectCard
-            key={project.id}
-            project={project}
-            joined={joinedIds.includes(project.id)}
-            onToggle={toggleParticipation}
-          />
-        ))}
-      </div>
+      <h1 className="text-2xl font-bold">My Projects</h1>
+
+      {loading ? (
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-[120px] w-full" />
+          ))}
+        </div>
+      ) : projects.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {projects.map((project) => (
+            <Card key={project.id}>
+              <CardHeader>
+                <CardTitle>{project.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-1 text-sm text-muted-foreground">
+                <p>{project.description}</p>
+                <p>Status: <span className="font-medium">{project.status}</span></p>
+                <p>Duration: {project.start_date} - {project.end_date}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground">You are not part of any projects yet.</p>
+      )}
     </div>
   )
 }
