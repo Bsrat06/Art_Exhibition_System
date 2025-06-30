@@ -5,6 +5,8 @@ import { Input } from "../../components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "../../components/ui/select"
 import { Filter } from "lucide-react"
 import { useDebounce } from "../../hooks/use-debounce"
+import { useAuth } from "../../hooks/useAuth"
+import { toast } from "sonner"
 
 interface Artwork {
   id: number
@@ -14,9 +16,13 @@ interface Artwork {
   category: string
   description: string
   submission_date: string
+  approval_status: string
+  likes_count: number
+  is_liked?: boolean
 }
 
 export default function VisitorGallery() {
+  const { user } = useAuth()
   const [artworks, setArtworks] = useState<Artwork[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
@@ -27,17 +33,33 @@ export default function VisitorGallery() {
   useEffect(() => {
     const fetchArtworks = async () => {
       try {
-        let url = "/artwork/?approval_status=approved"
+        let url = "/artwork/?approval_status=approved&page_size=1000"
         if (debouncedSearch) url += `&search=${debouncedSearch}`
         if (categoryFilter !== "all") url += `&category=${categoryFilter}`
 
-        const res = await API.get(`/artwork/?approval_status=approved&page_size=1000`)
-        setArtworks(res.data.results)
+        const res = await API.get(url)
+        let artworksData = res.data.results
+
+        // If user is logged in, fetch their liked artworks
+        if (user) {
+          try {
+            const likedRes = await API.get("/artworks/liked/")
+            const likedArtworkIds = new Set(likedRes.data.map((art: { id: number }) => art.id))
+            artworksData = artworksData.map((art: Artwork) => ({
+              ...art,
+              is_liked: likedArtworkIds.has(art.id)
+            }))
+          } catch (error) {
+            console.error("Failed to fetch liked artworks", error)
+          }
+        }
+
+        setArtworks(artworksData)
         
         // Extract unique categories from approved artworks
         const uniqueCategories = Array.from(
-          new Set(res.data.results.map((art: Artwork) => art.category).filter(Boolean))
-        )
+          new Set(artworksData.map((art: Artwork) => art.category).filter(Boolean)
+        ))
         setCategories(uniqueCategories)
       } catch (err) {
         console.error("Failed to load artworks:", err)
@@ -47,7 +69,38 @@ export default function VisitorGallery() {
     }
 
     fetchArtworks()
-  }, [debouncedSearch, categoryFilter])
+  }, [debouncedSearch, categoryFilter, user])
+
+  const handleLike = async (artworkId: number) => {
+    if (!user) {
+      toast.error("Please login to like artworks")
+      return
+    }
+
+    try {
+      const artwork = artworks.find(art => art.id === artworkId)
+      if (artwork?.is_liked) {
+        await API.delete(`/artwork/${artworkId}/unlike/`)
+        setArtworks(prev => prev.map(art => 
+          art.id === artworkId 
+            ? { ...art, likes_count: art.likes_count - 1, is_liked: false } 
+            : art
+        ))
+        toast.success("Artwork unliked")
+      } else {
+        await API.post(`/artwork/${artworkId}/like/`)
+        setArtworks(prev => prev.map(art => 
+          art.id === artworkId 
+            ? { ...art, likes_count: art.likes_count + 1, is_liked: true } 
+            : art
+        ))
+        toast.success("Artwork liked!")
+      }
+    } catch (error) {
+      console.error("Failed to update like status", error)
+      toast.error("Failed to update like status")
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -97,8 +150,11 @@ export default function VisitorGallery() {
                 image: artwork.image,
                 description: artwork.description,
                 category: artwork.category,
-                date: artwork.submission_date
+                date: artwork.submission_date,
+                likes: artwork.likes_count,
+                isLiked: artwork.is_liked || false
               }}
+              onLike={() => handleLike(artwork.id)}
             />
           ))}
         </div>

@@ -214,7 +214,7 @@ export default function Home() {
               Become a member to connect with artists, attend exclusive events, and showcase your work.
             </p>
             <Button asChild className="w-full text-sm bg-teal-500 hover:bg-teal-600">
-              <a href="/signup">Sign Up Now</a>
+              <a href="/register">Sign Up Now</a>
             </Button>
           </div>
         </DialogContent>
