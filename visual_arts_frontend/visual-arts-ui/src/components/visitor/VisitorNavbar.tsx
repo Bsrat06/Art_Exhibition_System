@@ -1,108 +1,105 @@
-import { NavLink, useNavigate } from "react-router-dom"
-import { useState } from "react"
-import { useAuth } from "../../hooks/useAuth"
+import React, { useState, useEffect } from "react"
+import { Link, useNavigate } from "react-router-dom"
 import { Button } from "../../components/ui/button"
-import { Menu, X } from "lucide-react"
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
+import LogoutButton from "../../components/common/LogoutButton"
+import { useTheme } from "../../context/ThemeProvider"
+import { Moon, Sun, Menu } from "lucide-react"
+import { cn } from "../../lib/utils"
 
 export default function VisitorNavbar() {
-  const { user, loading } = useAuth()
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [isMobileOpen, setIsMobileOpen] = useState(false)
   const navigate = useNavigate()
-  const [open, setOpen] = useState(false)
 
-  const handleLogout = () => {
-    localStorage.removeItem("token")
-    localStorage.removeItem("role")
-    navigate("/login")
-  }
+  const { theme, toggleTheme } = useTheme()
 
-  const links = [
-    { name: "Home", path: "/" },
-    { name: "Gallery", path: "/gallery" },
-    { name: "Events", path: "/events" },
-    { name: "Projects", path: "/projects" },
-    { name: "Contact", path: "/contact" }
-  ]
+  const token = localStorage.getItem("token")
+  const isAuthenticated = !!token
+
+  const username = localStorage.getItem("username") || "Guest"
+  const avatarUrl = localStorage.getItem("avatarUrl") || "https://via.placeholder.com/40"
+
+  const toggleDropdown = () => setIsDropdownOpen((prev) => !prev)
+  const toggleMobileMenu = () => setIsMobileOpen((prev) => !prev)
+
+  useEffect(() => {
+    const close = () => {
+      setIsDropdownOpen(false)
+      setIsMobileOpen(false)
+    }
+    window.addEventListener("click", close)
+    return () => window.removeEventListener("click", close)
+  }, [])
 
   return (
-    <header className="bg-white shadow-md sticky top-0 z-50">
-      <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
-        <NavLink to="/" className="text-lg font-bold">
-          🎨 Visual Arts
-        </NavLink>
+    <nav className="bg-background border-b shadow-sm dark:bg-gray-900 dark:border-gray-800">
+      <div className="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center font-poppins">
+        {/* Left Logo + Mobile Toggle */}
+        <div className="flex items-center gap-4">
+          <button onClick={toggleMobileMenu} className="sm:hidden text-muted-foreground">
+            <Menu />
+          </button>
+          <Link to="/" className="text-xl font-bold text-primary">
+            VisualArts
+          </Link>
+        </div>
 
-        {/* Desktop Nav */}
-        <nav className="space-x-4 hidden md:flex items-center">
-          {links.map(link => (
-            <NavLink
-              key={link.name}
-              to={link.path}
-              className={({ isActive }) =>
-                `text-sm px-2 py-1 rounded ${isActive ? "bg-primary text-white" : "hover:bg-gray-200"}`
-              }
-            >
-              {link.name}
-            </NavLink>
-          ))}
+        {/* Main Nav */}
+        <ul
+          className={cn(
+            "hidden sm:flex space-x-6 text-sm font-medium",
+            isMobileOpen && "absolute top-full left-0 right-0 bg-background p-4 flex flex-col gap-3 shadow"
+          )}
+        >
+          <li><Link to="/" className="hover:text-primary">Home</Link></li>
+          <li><Link to="/about" className="hover:text-primary">About</Link></li>
+          <li><Link to="/contact" className="hover:text-primary">Contact</Link></li>
+          <li><Link to="/gallery" className="hover:text-primary">Gallery</Link></li>
+          <li><Link to="/events" className="hover:text-primary">Events</Link></li>
+          <li><Link to="/projects" className="hover:text-primary">Projects</Link></li>
+        </ul>
 
-          {!loading && user ? (
-            <>
-              <span className="text-sm text-muted-foreground">{user.first_name} ({user.role})</span>
-              <Button size="sm" variant="outline" onClick={handleLogout}>Logout</Button>
-            </>
+        {/* Right User & Theme Actions */}
+        <div className="flex items-center gap-3">
+          {/* Theme toggle */}
+          <Button variant="ghost" size="icon" onClick={toggleTheme}>
+            {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </Button>
+
+          {/* Authenticated User */}
+          {isAuthenticated ? (
+            <div className="relative z-20" onClick={(e) => e.stopPropagation()}>
+              <Button
+                variant="ghost"
+                className="flex items-center space-x-2"
+                onClick={toggleDropdown}
+              >
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={avatarUrl} alt={username} />
+                  <AvatarFallback>{username.charAt(0).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <span className="hidden sm:inline">{username}</span>
+              </Button>
+              {isDropdownOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-md shadow-lg py-2 animate-fadeIn">
+                  <Link to="/member/profile" className="block px-4 py-2 text-sm hover:bg-accent">My Profile</Link>
+                  <LogoutButton />
+                </div>
+              )}
+            </div>
           ) : (
             <>
-              <NavLink to="/login" className="text-sm hover:underline">
-                Login
-              </NavLink>
-              <NavLink to="/register" className="text-sm hover:underline">
-                Register
-              </NavLink>
+              <Link to="/login">
+                <Button variant="outline" size="sm">Login</Button>
+              </Link>
+              <Link to="/register">
+                <Button size="sm">Register</Button>
+              </Link>
             </>
           )}
-        </nav>
-
-        {/* Mobile toggle */}
-        <div className="md:hidden">
-          <Button variant="ghost" size="icon" onClick={() => setOpen(!open)}>
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
         </div>
       </div>
-
-      {/* Mobile Menu */}
-      {open && (
-        <div className="md:hidden px-4 pb-4 space-y-2">
-          {links.map(link => (
-            <NavLink
-              key={link.name}
-              to={link.path}
-              className="block text-sm px-2 py-1 rounded hover:bg-gray-100"
-              onClick={() => setOpen(false)}
-            >
-              {link.name}
-            </NavLink>
-          ))}
-          {!loading && user ? (
-            <>
-              <p className="text-sm text-muted-foreground">
-                {user.first_name} ({user.role})
-              </p>
-              <Button size="sm" variant="outline" className="w-full" onClick={handleLogout}>
-                Logout
-              </Button>
-            </>
-          ) : (
-            <>
-              <NavLink to="/login" className="block text-sm hover:underline" onClick={() => setOpen(false)}>
-                Login
-              </NavLink>
-              <NavLink to="/register" className="block text-sm hover:underline" onClick={() => setOpen(false)}>
-                Register
-              </NavLink>
-            </>
-          )}
-        </div>
-      )}
-    </header>
+    </nav>
   )
 }

@@ -1,7 +1,4 @@
-import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card"
-import { Link } from "react-router-dom"
-
-type Props = {
+interface Props {
   artwork: {
     id: number
     title: string
@@ -12,16 +9,12 @@ type Props = {
 
 export function ArtworkPublicCard({ artwork }: Props) {
   return (
-    <Link to={`/artwork/${artwork.id}`}>
-      <Card className="hover:shadow-lg transition">
-        <CardHeader>
-          <CardTitle className="text-base">{artwork.title}</CardTitle>
-          <p className="text-xs text-muted-foreground">by {artwork.artist}</p>
-        </CardHeader>
-        <CardContent>
-          <img src={artwork.image} alt={artwork.title} className="rounded w-full h-40 object-cover" />
-        </CardContent>
-      </Card>
-    </Link>
+    <div className="rounded overflow-hidden shadow bg-card">
+      <img src={artwork.image} alt={artwork.title} className="w-full h-48 object-cover" />
+      <div className="p-4">
+        <h3 className="text-lg font-semibold">{artwork.title}</h3>
+        <p className="text-muted-foreground text-sm">By {artwork.artist}</p>
+      </div>
+    </div>
   )
 }

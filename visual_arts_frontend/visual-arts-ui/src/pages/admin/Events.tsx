@@ -135,7 +135,7 @@ export default function ManageEvents() {
 
   const fetchStats = async () => {
     try {
-      const res = await API.get("/events/stats/");
+      const res = await API.get("event-stats/");
       setStats(res.data);
     } catch (error) {
       console.error("Failed to fetch stats", error);
