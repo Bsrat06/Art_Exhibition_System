@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
 import { Tooltip, TooltipProvider, TooltipTrigger, TooltipContent } from "../../components/ui/tooltip";
 import { Badge } from "../../components/ui/badge";
-import { Upload, Trash2, Edit, RotateCw, ArrowUpDown, Filter, Plus, Image as ImageIcon, X } from "lucide-react";
+import { Upload, Trash2, Edit, RotateCw, ArrowUpDown, Filter, Plus, Image as ImageIcon, X, Heart } from "lucide-react";
 import { toast } from "sonner";
 import Cropper from "react-easy-crop";
 import API from "../../lib/api";
@@ -23,6 +23,7 @@ type Artwork = {
   approval_status: string;
   submission_date: string;
   feedback?: string;
+  likes_count: number;
 };
 
 type ArtworkForm = {
@@ -547,7 +548,7 @@ export default function Portfolio() {
         <div className="space-y-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight">My Gallery</h2>
+              <h2 className="text-2xl font-semibold tracking-tight">My Uploads</h2>
               <p className="text-muted-foreground">
                 {totalItems} artworks in your collection
               </p>
@@ -657,15 +658,28 @@ export default function Portfolio() {
                           </div>
                         </div>
                       </div>
+
+                      {/* This is the correct outer div for the content below the image */}
                       <div className="p-4 space-y-2">
+                        {/* This div holds the category, approval status, and likes */}
                         <div className="flex items-center justify-between">
                           <Badge variant="outline" className="text-xs capitalize">
                             {art.category}
                           </Badge>
-                          <Badge variant={STATUS_VARIANTS[art.approval_status as keyof typeof STATUS_VARIANTS]}>
-                            {art.approval_status}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge variant={STATUS_VARIANTS[art.approval_status as keyof typeof STATUS_VARIANTS]}>
+                              {art.approval_status}
+                            </Badge>
+                            {art.approval_status === 'approved' && (
+                              <div className="flex items-center text-sm text-muted-foreground">
+                                <Heart className="w-4 h-4 mr-1" />
+                                {art.likes_count}
+                              </div>
+                            )}
+                          </div>
                         </div>
+
+                        {/* Re-add the rejected feedback section here */}
                         {art.approval_status === "rejected" && art.feedback && (
                           <Tooltip>
                             <TooltipTrigger asChild>

@@ -14,6 +14,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar"
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
+import { EventForm } from "../../components/admin/EventForm";
+
 
 type Event = {
   id: number;
@@ -263,6 +265,45 @@ export default function ManageEvents() {
     document.body.removeChild(link);
   };
 
+  const handleCreateEvent = async (data: any) => {
+    try {
+
+      const formattedDate = new Date(data.date).toISOString().split('T')[0];
+      
+      // Create FormData for file upload support
+      const formData = new FormData();
+      formData.append('title', data.title);
+      formData.append('location', data.location);
+      formData.append('date', formattedDate);
+      formData.append('description', data.description || '');
+      
+      // Append file if it exists
+      if (data.event_cover && data.event_cover[0]) {
+        formData.append('event_cover', data.event_cover[0]);
+      }
+
+      // Get auth token if needed
+      const token = localStorage.getItem('token'); // or your auth token storage method
+
+      const config = {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+          ...(token && { 'Authorization': `Bearer ${token}` }) // Add auth header if token exists
+        }
+      };
+
+      const res = await API.post('/events/', formData, config);
+      fetchEvents(page, debouncedSearch, statusFilter, locationFilter);
+      fetchStats();
+      toast.success("Event created successfully");
+      return true;
+    } catch (error) {
+      console.error("Error details:", error.response?.data); // Log detailed error
+      toast.error(error.response?.data?.message || "Failed to create event");
+      return false;
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -270,16 +311,24 @@ export default function ManageEvents() {
           <h1 className="text-2xl font-bold">Manage Events</h1>
           <p className="text-muted-foreground">Manage all events and their participants</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={exportToCSV}>
-            <Download className="w-4 h-4 mr-2" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => fetchEvents(page, debouncedSearch, statusFilter, locationFilter)} disabled={isLoading}>
-            <RotateCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-        </div>
+        
+
+          <div className="flex gap-2">
+            <EventForm 
+              triggerLabel="Add Event"
+              onSubmit={handleCreateEvent}
+            />
+            <Button variant="outline" size="sm" onClick={exportToCSV}>
+              <Download className="w-4 h-4 mr-2" />
+              Export
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => fetchEvents(page, debouncedSearch, statusFilter, locationFilter)} disabled={isLoading}>
+              <RotateCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
+
+          
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">

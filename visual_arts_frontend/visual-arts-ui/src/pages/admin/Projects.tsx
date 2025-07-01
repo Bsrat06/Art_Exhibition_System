@@ -7,15 +7,21 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Badge } from "../../components/ui/badge";
 import { Checkbox } from "../../components/ui/checkbox";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../../components/ui/dropdown-menu";
-import { MoreHorizontal, ArrowUpDown, Filter, Download, RotateCw, Trash2, Edit, Users, Calendar, Lock, Eye } from "lucide-react";
+import { MoreHorizontal, ArrowUpDown, Filter, Download, RotateCw, Trash2, Edit, Users, Calendar, Lock, Eye, Check } from "lucide-react";
 import { toast } from "sonner";
 import { useDebounce } from "../../hooks/use-debounce";
-import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
+import { Avatar, AvatarImage, AvatarFallback } from "../../components/ui/avatar";
 import { Card, CardHeader, CardTitle, CardContent } from "../../components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../../components/ui/dialog";
 import { ProjectForm } from "../../components/admin/ProjectForm";
 
+const getInitials = (name: string) => {
+  const words = name.split(" ");
+  const first = words[0]?.charAt(0) || "";
+  const last = words[1]?.charAt(0) || "";
+  return `${first}${last}`.toUpperCase();
+};
 
 type Member = {
   id: number;
@@ -27,10 +33,13 @@ type Project = {
   id: number;
   title: string;
   description: string;
-  progress: number;
-  status: "in_progress" | "completed";
+  progress?: number;
+  status?: "in_progress" | "completed";
   start_date: string;
+  end_date?: string | null;
   members: number[];
+  is_completed: boolean;
+  image?: string | null;
 };
 
 type SortConfig = {
@@ -59,7 +68,7 @@ function ProjectDetailsDialog({ project, members }: { project: Project; members:
             <span className="font-medium">Description:</span> {project.description}
           </p>
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium">Progress:</span> {project.progress}%
+            <span className="font-medium">Progress:</span> {project.progress ?? 0}%
           </p>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium">Status:</span>{" "}
@@ -94,15 +103,30 @@ function ProjectDetailsDialog({ project, members }: { project: Project; members:
   );
 }
 
-function AssignMembersDialog({ project, members, onAssign }: { project: Project; members: Member[]; onAssign: (projectId: number, memberIds: number[]) => void }) {
+function AssignMembersDialog({ project, members, onAssign, onOpenChange }: { project: Project; members: Member[]; onAssign: (projectId: number, memberIds: number[]) => void; onOpenChange: (open: boolean) => void }) {
   const [selectedMembers, setSelectedMembers] = useState<number[]>(project.members);
+
+  useEffect(() => {
+    setSelectedMembers(project.members);
+  }, [project.members]);
+
+  const handleCancel = () => {
+    setSelectedMembers(project.members);
+    onOpenChange(false);
+  };
+
+  const handleAssign = () => {
+    onAssign(project.id, selectedMembers);
+    onOpenChange(false);
+  };
+
   return (
     <DialogContent className="bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700">
       <DialogHeader>
         <DialogTitle className="text-gray-900 dark:text-white">Assign Members to {project.title}</DialogTitle>
         <DialogDescription className="text-muted-foreground">Select members to assign to this project.</DialogDescription>
       </DialogHeader>
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[40vh] overflow-y-auto pr-2">
         {members.map(member => (
           <div key={member.id} className="flex items-center gap-2">
             <Checkbox
@@ -124,10 +148,10 @@ function AssignMembersDialog({ project, members, onAssign }: { project: Project;
         ))}
       </div>
       <DialogFooter>
-        <Button variant="outline" onClick={() => setSelectedMembers(project.members)} className="border-gray-300 dark:border-gray-600">
+        <Button variant="outline" onClick={handleCancel} className="border-gray-300 dark:border-gray-600">
           Cancel
         </Button>
-        <Button onClick={() => onAssign(project.id, selectedMembers)}>Assign</Button>
+        <Button onClick={handleAssign}>Assign</Button>
       </DialogFooter>
     </DialogContent>
   );
@@ -162,14 +186,19 @@ export default function ManageProjects() {
       if (search) url += `&search=${search}`;
       if (status !== "all") url += `&status=${status}`;
       if (member !== "all") url += `&members=${member}`;
-
       const res = await API.get(url);
-      setProjects(res.data.results || []);
+      const projects = res.data.results || [];
+      console.log('Fetched projects:', projects); // Debug project data
+      setProjects(projects);
       setHasNext(!!res.data.next);
       setHasPrev(!!res.data.previous);
       setTotalProjects(res.data.count || 0);
     } catch (error) {
       toast.error("Failed to fetch projects");
+      setProjects([]);
+      setHasNext(false);
+      setHasPrev(false);
+      setTotalProjects(0);
     } finally {
       setIsLoading(false);
     }
@@ -177,16 +206,23 @@ export default function ManageProjects() {
 
   const fetchMembers = async () => {
     try {
-      const res = await API.get("/members/");
-      setMembers(res.data.results || res.data);
+      let allMembers: Member[] = [];
+      let nextPage: string | null = '/members/';
+      while (nextPage) {
+        const res = await API.get(nextPage);
+        allMembers = [...allMembers, ...(res.data.results || res.data)];
+        nextPage = res.data.next;
+      }
+      setMembers(allMembers);
     } catch (error) {
-      toast.error("Failed to fetch members");
+      toast.error("Failed to fetch members. Please check if the /members/ endpoint is configured.");
+      setMembers([]);
     }
   };
 
   const fetchStats = async () => {
     try {
-      const res = await API.get("/projects/stats/");
+      const res = await API.get("/project-stats/");
       setStats(res.data);
     } catch (error) {
       console.error("Failed to fetch stats", error);
@@ -196,35 +232,51 @@ export default function ManageProjects() {
   };
 
   useEffect(() => {
-    fetchProjects(page, debouncedSearch, statusFilter, memberFilter);
+    setPage(1);
+    fetchProjects(1, debouncedSearch, statusFilter, memberFilter);
     fetchMembers();
     fetchStats();
-  }, [page, debouncedSearch, statusFilter, memberFilter, activeTab]);
+  }, [debouncedSearch, statusFilter, memberFilter, activeTab]);
 
   const addProject = async (project: any) => {
     try {
       const res = await API.post("/projects/", { ...project, members: [] });
       fetchProjects(page, debouncedSearch, statusFilter, memberFilter);
       fetchStats();
+      setShowEditDialog(false);
       toast.success("Project created successfully");
     } catch (error) {
       toast.error("Failed to create project");
     }
   };
 
-  const editProject = async (updated: any) => {
+  const editProject = async (updated: any, id: number | undefined) => {
     try {
-      await API.patch(`/projects/${updated.id}/`, updated);
+      if (!id) {
+        toast.error("Project ID is missing. Please select a valid project.");
+        return;
+      }
+      console.log('PATCH payload:', updated);
+      await API.patch(`/projects/${id}/`, updated, {
+        headers: { 'Content-Type': 'application/json' },
+      });
       fetchProjects(page, debouncedSearch, statusFilter, memberFilter);
       fetchStats();
       setShowEditDialog(false);
       toast.success("Project updated successfully");
-    } catch (error) {
-      toast.error("Failed to update project");
+    } catch (error: any) {
+      console.error('PATCH error:', error.response?.data);
+      if (error.response?.status === 404) {
+        toast.error("Project not found. Refreshing project list...");
+        fetchProjects(page, debouncedSearch, statusFilter, memberFilter);
+      } else {
+        toast.error(error.response?.data?.detail || JSON.stringify(error.response?.data) || "Failed to update project");
+      }
     }
   };
 
   const deleteProject = async (id: number) => {
+    setIsLoading(true);
     try {
       await API.delete(`/projects/${id}/`);
       fetchProjects(page, debouncedSearch, statusFilter, memberFilter);
@@ -232,6 +284,8 @@ export default function ManageProjects() {
       toast.success("Project deleted successfully");
     } catch (error) {
       toast.error("Failed to delete project");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -241,7 +295,7 @@ export default function ManageProjects() {
       return;
     }
     try {
-      await Promise.all(selectedIds.map(id => API.delete(`/projects/${id}/`)));
+      await API.post('/projects/bulk-delete/', { project_ids: selectedIds });
       fetchProjects(page, debouncedSearch, statusFilter, memberFilter);
       fetchStats();
       setSelectedIds([]);
@@ -256,8 +310,9 @@ export default function ManageProjects() {
       await API.patch(`/projects/${projectId}/`, { members: memberIds });
       fetchProjects(page, debouncedSearch, statusFilter, memberFilter);
       toast.success("Members assigned successfully");
-    } catch (error) {
-      toast.error("Failed to assign members");
+      setShowAssignDialog(false);
+    } catch (error: any) {
+      toast.error(error.response?.data?.detail || "Failed to assign members");
     }
   };
 
@@ -314,35 +369,55 @@ export default function ManageProjects() {
     return new Date(dateString).toLocaleDateString();
   };
 
-  const getInitials = (name: string) => {
-    const words = name.split(" ");
-    const first = words[0]?.charAt(0) || "";
-    const last = words[1]?.charAt(0) || "";
-    return `${first}${last}`.toUpperCase();
+  const exportToCSV = async () => {
+    try {
+      const res = await API.get("/projects/?all=true");
+      const projects = res.data.results || res.data;
+      const headers = ["ID", "Title", "Description", "Progress", "Status", "Start Date", "Assigned Members"];
+      const rows = projects.map((project: Project) => [
+        project.id,
+        `"${project.title}"`,
+        `"${project.description.replace(/"/g, '""')}"`,
+        project.progress ?? 0,
+        project.status ?? (project.is_completed ? "completed" : "in_progress"),
+        new Date(project.start_date).toISOString(),
+        project.members.length
+      ].join(","));
+
+      const csvContent = [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `projects_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.style.visibility = "hidden";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      toast.error("Failed to export projects");
+    }
   };
 
-  const exportToCSV = () => {
-    const headers = ["ID", "Title", "Description", "Progress", "Status", "Start Date", "Assigned Members"];
-    const rows = projects.map(project => [
-      project.id,
-      `"${project.title}"`,
-      `"${project.description.replace(/"/g, '""')}"`,
-      project.progress,
-      project.status,
-      new Date(project.start_date).toISOString(),
-      project.members.length
-    ].join(","));
+  const completeProject = async (projectId: number) => {
+    try {
+      await API.post(`/projects/${projectId}/complete/`);
+      fetchProjects(page, debouncedSearch, statusFilter, memberFilter);
+      fetchStats();
+      toast.success("Project marked as completed");
+    } catch (error) {
+      toast.error("Failed to complete project");
+    }
+  };
 
-    const csvContent = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `projects_${new Date().toISOString().slice(0, 10)}.csv`);
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleEdit = (project: Project) => {
+    console.log('Selected project for edit:', project); // Debug
+    if (!project?.id) {
+      toast.error("Invalid project selected. Please try again.");
+      return;
+    }
+    setSelectedProject(project);
+    setShowEditDialog(true);
   };
 
   return (
@@ -361,7 +436,10 @@ export default function ManageProjects() {
             <RotateCw className={`w-4 h-4 mr-2 ${isLoading ? "animate-spin" : ""}`} />
             Refresh
           </Button>
-          <Button size="sm" onClick={() => setShowEditDialog(true)}>
+          <Button size="sm" onClick={() => {
+            setSelectedProject(null);
+            setShowEditDialog(true);
+          }}>
             <Users className="w-4 h-4 mr-2" />
             Add Project
           </Button>
@@ -539,7 +617,7 @@ export default function ManageProjects() {
                     <div className="font-medium">{project.title}</div>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{project.progress}%</div>
+                    <div className="text-sm">{project.progress ?? 0}%</div>
                   </TableCell>
                   <TableCell>
                     <Badge variant={project.status === "completed" ? "destructive" : "default"}>
@@ -547,7 +625,7 @@ export default function ManageProjects() {
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <div className="text-sm">{formatDate(project.start_date)}</div>
+                    {formatDate(project.start_date)}
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2">
@@ -585,10 +663,7 @@ export default function ManageProjects() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
-                          onClick={() => {
-                            setSelectedProject(project);
-                            setShowEditDialog(true);
-                          }}
+                          onClick={() => handleEdit(project)}
                         >
                           <Edit className="w-4 h-4" />
                           Edit
@@ -616,6 +691,13 @@ export default function ManageProjects() {
                         >
                           <Trash2 className="w-4 h-4" />
                           Delete
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="flex items-center gap-2 p-2 hover:bg-muted cursor-pointer"
+                          onClick={() => completeProject(project.id)}
+                        >
+                          <Check className="w-4 h-4" />
+                          Mark as Complete
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -667,7 +749,14 @@ export default function ManageProjects() {
       </Dialog>
 
       <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-        {selectedProject && <AssignMembersDialog project={selectedProject} members={members} onAssign={assignMembers} />}
+        {selectedProject && (
+          <AssignMembersDialog
+            project={selectedProject}
+            members={members}
+            onAssign={assignMembers}
+            onOpenChange={setShowAssignDialog}
+          />
+        )}
       </Dialog>
     </div>
   );

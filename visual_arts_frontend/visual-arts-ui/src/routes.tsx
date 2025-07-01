@@ -30,7 +30,7 @@ import VisitorGallery from "./pages/visitor/Gallery"
 import ArtworkDetail from "./pages/visitor/ArtworkDetail"
 import VisitorEvents from "./pages/visitor/Events"
 import VisitorProjects from "./pages/visitor/Projects"
-
+import EventDetail from "./pages/visitor/EventDetail"
 
 import About from "./pages/public/About"
 import Contact from "./pages/public/Contact"
@@ -70,6 +70,7 @@ export default function AppRoutes() {
       <Route path="/gallery" element={<VisitorGallery />} />
       <Route path="/artwork/:id" element={<ArtworkDetail />} />
       <Route path="/events" element={<VisitorEvents />} />
+      <Route path="/events/:id" element={<EventDetail />} />
       <Route path="/projects" element={<VisitorProjects />} />
     </Route>
 

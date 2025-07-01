@@ -150,7 +150,7 @@ export default function MemberDashboard() {
               asChild
               className="h-16 bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg transition-all"
             >
-              <Link to="/member/artworks/upload" className="flex flex-col items-center justify-center gap-2">
+              <Link to="/member/portfolio" className="flex flex-col items-center justify-center gap-2">
                 <FiUpload className="w-6 h-6" />
                 <span className="text-sm font-medium">Upload Artwork</span>
               </Link>

@@ -12,6 +12,7 @@ import { Slider } from "../../components/ui/slider";
 import API from "../../lib/api";
 import { Badge } from "../../components/ui/badge";
 import { Progress } from "../../components/ui/progress";
+import { Avatar, AvatarFallback, AvatarImage } from "../../components/ui/avatar";
 
 type ProfileForm = {
   first_name: string;
@@ -32,6 +33,12 @@ type CroppedAreaPixels = {
 const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 const validatePassword = (password: string) =>
   password === "" || /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/.test(password);
+
+const getInitials = (firstName?: string, lastName?: string) => {
+  const first = firstName ? firstName.charAt(0) : '';
+  const last = lastName ? lastName.charAt(0) : '';
+  return `${first}${last}`.toUpperCase();
+};
 
 export default function MemberProfile() {
   const [form, setForm] = useState<ProfileForm>({
@@ -255,17 +262,18 @@ export default function MemberProfile() {
             <div className="flex flex-col sm:flex-row gap-6">
               <div className="flex flex-col items-center sm:items-start gap-4">
                 <div className="relative group">
-                  {previewUrl ? (
-                    <img
-                      src={previewUrl}
-                      alt="Profile preview"
-                      className="w-32 h-32 rounded-full border-4 border-white dark:border-gray-800 shadow-md object-cover transition-transform group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-32 h-32 rounded-full bg-gray-100 dark:bg-gray-800 border-4 border-white dark:border-gray-800 shadow-md flex items-center justify-center">
-                      <User className="w-12 h-12 text-gray-400 dark:text-gray-500" />
-                    </div>
-                  )}
+                  <Avatar className="w-32 h-32 rounded-full border-4 border-white dark:border-gray-800 shadow-md">
+                    {previewUrl ? (
+                      <AvatarImage 
+                        src={previewUrl} 
+                        alt={`${form.first_name} ${form.last_name}`}
+                        className="object-cover"
+                      />
+                    ) : null}
+                    <AvatarFallback className="bg-gray-100 dark:bg-gray-800 text-2xl font-medium">
+                      {getInitials(form.first_name, form.last_name)}
+                    </AvatarFallback>
+                  </Avatar>
                   <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
                     <Tooltip>
                       <TooltipTrigger asChild>
